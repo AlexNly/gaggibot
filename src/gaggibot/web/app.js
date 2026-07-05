@@ -51,20 +51,25 @@ function esc(s) {
 }
 
 async function route() {
-  const id = location.hash.slice(1);
-  if (!id) {
+  const hash = location.hash.slice(1);
+  if (!hash) {
     $("#detail-view").hidden = true;
     $("#list-view").hidden = false;
     return;
   }
+  const [id, compareId] = hash.split("+");
   const shot = await (await fetch(`shots/${id}.json`)).json();
+  let compare = null;
+  if (compareId) {
+    try { compare = await (await fetch(`shots/${compareId}.json`)).json(); } catch { /* ignore */ }
+  }
   $("#list-view").hidden = true;
   $("#detail-view").hidden = false;  // unhide before rendering: charts measure their container
-  renderDetail(id, shot);
+  renderDetail(id, shot, compareId, compare);
   window.scrollTo(0, 0);
 }
 
-function renderDetail(id, shot) {
+function renderDetail(id, shot, compareId, compare) {
   const h = shot.header, n = shot.notes || {};
   $("#shot-title").textContent = `Shot #${parseInt(id, 10)} — ${h.profile}`;
   const bits = [fmtDate(h.ts), `${h.duration_s.toFixed(0)}s`];
@@ -73,12 +78,27 @@ function renderDetail(id, shot) {
   if (n.rating) bits.push(stars(n.rating));
   $("#shot-meta").innerHTML = bits.join(" · ");
 
+  // compare selector
+  const picker = $("#compare");
+  picker.innerHTML = `<option value="">compare with…</option>` + INDEX.shots
+    .filter(s => s.id !== id)
+    .map(s => `<option value="${s.id}" ${s.id === compareId ? "selected" : ""}>#${parseInt(s.id, 10)} · ${esc(s.profile)}${s.bean ? " · " + esc(s.bean) : ""}${s.rating ? " · " + "★".repeat(s.rating) : ""}</option>`)
+    .join("");
+  picker.onchange = () => { location.hash = picker.value ? `${id}+${picker.value}` : id; };
+
   const charts = $("#charts");
   charts.innerHTML = "";
   const t = shot.series.t;
   const S = (key) => shot.series[key] && shot.series[key].some(v => v !== 0) ? shot.series[key] : null;
 
-  combinedChart(charts, t, h.phases, S);
+  let overlay = null;
+  if (compare) {
+    const cs = compare.series;
+    const O = k => cs[k] && cs[k].some(v => v !== 0) ? cs[k] : null;
+    overlay = { label: `#${parseInt(compareId, 10)}`, t: cs.t, S: O };
+  }
+
+  combinedChart(charts, t, h.phases, S, overlay);
 
   const dl = [];
   const noteFields = [["Bean", n.beanType], ["Grind", n.grindSetting],
@@ -97,7 +117,7 @@ function renderDetail(id, shot) {
  * blue pressures, green flows, purple weights; targets dashed.
  */
 
-function combinedChart(parent, t, phases, S) {
+function combinedChart(parent, t, phases, S, overlay) {
   if (!t || t.length < 2) return;
   const v = S("v"), ev = S("ev");
   const weight = v || ev;
@@ -113,27 +133,38 @@ function combinedChart(parent, t, phases, S) {
     { key: "vf", label: "Weight Flow", data: S("vf"), color: css("--c-wflow"), axis: "bar" },
   ].filter(s => s.data);
 
+  // overlay: dimmed pressure/flow/weight curves of another shot for comparison
+  const overlaySeries = overlay ? [
+    { data: overlay.S("cp"), color: css("--c-press"), axis: "bar", t: overlay.t },
+    { data: overlay.S("fl"), color: css("--c-flow"), axis: "bar", t: overlay.t },
+    { data: overlay.S("v") || overlay.S("ev"), color: css("--c-weight"), axis: "g", t: overlay.t },
+  ].filter(s => s.data) : [];
+
   const card = document.createElement("div");
   card.className = "chart-card";
   card.innerHTML = `<div class="legend">${series.map(s =>
     `<span><span class="chip${s.dash ? " dash" : ""}" style="background:${s.color};color:${s.color}"></span>${s.label}</span>`).join("")}
+    ${overlaySeries.length ? `<span class="overlay-note">dimmed: shot ${overlay.label}</span>` : ""}
   </div>`;
   parent.appendChild(card);
 
   const W = Math.max(340, Math.min(card.clientWidth - 28, 900)), H = 340;
-  const hasWeight = series.some(s => s.axis === "g");
+  const hasWeight = series.some(s => s.axis === "g") || overlaySeries.some(s => s.axis === "g");
   const padL = 44, padR = hasWeight ? 84 : 46, padT = 10, padB = 26;
-  const xMax = t[t.length - 1] || 1;
+  const xMax = Math.max(t[t.length - 1] || 1,
+    ...overlaySeries.map(s => s.t[s.t.length - 1] || 0));
 
   // temp axis: tight window like GaggiMate (e.g. 86-100 °C)
   const temps = series.filter(s => s.axis === "temp").flatMap(s => s.data);
   const tempMin = temps.length ? Math.floor(Math.min(...temps) / 2) * 2 : 0;
   const tempMax = temps.length ? Math.ceil((Math.max(...temps) + 0.5) / 2) * 2 : 1;
   // bar / g/s axis: zero-based
-  const bars = series.filter(s => s.axis === "bar").flatMap(s => s.data);
+  const bars = series.concat(overlaySeries).filter(s => s.axis === "bar").flatMap(s => s.data);
   const barMax = Math.max(2, Math.ceil(Math.max(...bars, 0) * 1.15));
   // weight axis: zero-based
-  const gMax = hasWeight ? Math.max(5, Math.ceil(Math.max(...weight) * 1.1 / 5) * 5) : 1;
+  const gWeights = series.filter(s => s.axis === "g").flatMap(s => s.data)
+    .concat(overlaySeries.filter(s => s.axis === "g").flatMap(s => s.data));
+  const gMax = hasWeight ? Math.max(5, Math.ceil(Math.max(...gWeights) * 1.1 / 5) * 5) : 1;
 
   const x = s => padL + (s / xMax) * (W - padL - padR);
   const yOf = {
@@ -162,6 +193,13 @@ function combinedChart(parent, t, phases, S) {
         transform="rotate(-90 ${px} ${padT + 4})" text-anchor="end">${esc(name)}</text>`;
   }).join("");
 
+  const overlayPaths = overlaySeries.map(s => {
+    const y = yOf[s.axis];
+    const d = s.data.map((val, i) => `${i ? "L" : "M"}${x(s.t[i]).toFixed(1)},${y(val).toFixed(1)}`).join("");
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.5"
+      opacity="0.4" stroke-linejoin="round"/>`;
+  }).join("");
+
   const paths = series.map(s => {
     const y = yOf[s.axis];
     const d = s.data.map((val, i) => `${i ? "L" : "M"}${x(t[i]).toFixed(1)},${y(val).toFixed(1)}`).join("");
@@ -174,7 +212,7 @@ function combinedChart(parent, t, phases, S) {
   svg.setAttribute("height", H);
   svg.innerHTML = `${leftTicks}${rightTicks}${gTicks}${axisTitles}${xt}
     <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="var(--axis)"/>
-    ${phaseMarks}${paths}
+    ${phaseMarks}${overlayPaths}${paths}
     <line class="cross" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="var(--axis)" visibility="hidden"/>`;
   card.appendChild(svg);
 
