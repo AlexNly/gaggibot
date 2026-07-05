@@ -129,10 +129,12 @@ async def sync(
         return True
 
 
-async def sync_soon(client: GaggiMateClient, repo: str | Path, notify) -> None:
+async def sync_soon(
+    client: GaggiMateClient, repo: str | Path, notify, *, site_title: str = "Shot Journal"
+) -> None:
     """Post-shot sync wrapper: run, report conflicts to the user, never raise."""
     try:
-        await sync(client, repo)
+        await sync(client, repo, site_title=site_title)
     except SyncConflict as exc:
         await notify(f"⚠️ Shot journal sync hit a git conflict — fix it manually:\n{exc}")
     except Exception as exc:  # noqa: BLE001

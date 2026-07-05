@@ -24,6 +24,7 @@ ENV_MAP = {
     "min_shot_s": "GAGGIBOT_MIN_SHOT_S",
     "ignore_profiles": "GAGGIBOT_IGNORE_PROFILES",
     "sync_enabled": "GAGGIBOT_SYNC",
+    "site_title": "GAGGIBOT_SITE_TITLE",
 }
 
 
@@ -45,6 +46,7 @@ class Config:
     min_shot_s: float = 10.0
     ignore_profiles: str = r"(?i)backflush|descale|flush|clean"
     sync_enabled: bool = False
+    site_title: str = "Shot Journal"
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> Config:

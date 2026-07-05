@@ -76,7 +76,7 @@ async def _sync(config: Config) -> int:
         return 1
     async with GaggiMateClient(config.machine_host) as client:
         # WS connection (for profiles) is optional here; HTTP does the rest.
-        pushed = await sync(client, config.data_repo)
+        pushed = await sync(client, config.data_repo, site_title=config.site_title)
     print("synced" if pushed else "nothing new")
     return 0
 
@@ -150,7 +150,10 @@ async def _run(config: Config, *, replay: str | None, dry_run: bool) -> int:
                     )
                     if config.sync_enabled and config.data_repo:
                         asyncio.create_task(
-                            sync_soon(client, config.data_repo, messenger.send)
+                            sync_soon(
+                                client, config.data_repo, messenger.send,
+                                site_title=config.site_title,
+                            )
                         )
 
             tasks = [asyncio.create_task(pump_events()), asyncio.create_task(pump_shots())]
