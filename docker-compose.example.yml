@@ -1,0 +1,19 @@
+# gaggibot — minimal deployment.
+# 1. copy to docker-compose.yml   2. fill in the env vars   3. docker compose up -d
+services:
+  gaggibot:
+    image: ghcr.io/alexnly/gaggibot:latest
+    restart: unless-stopped
+    environment:
+      GAGGIBOT_MACHINE_HOST: gaggimate.local   # or the machine's IP (recommended)
+      GAGGIBOT_MESSENGER: telegram             # telegram | discord
+      TELEGRAM_BOT_TOKEN: "123456:ABC..."      # from @BotFather
+      TELEGRAM_CHAT_ID: "12345678"             # your chat with the bot
+      # DISCORD_BOT_TOKEN: "..."
+      # DISCORD_CHANNEL_ID: "..."
+      # --- optional: git-backed shot journal + GitHub Pages site ---
+      # GAGGIBOT_DATA_REPO: /journal
+    volumes:
+      - ./data:/data                           # bot state (last shot, defaults)
+      # - ./journal:/journal                   # your data repo (git clone)
+      # - ~/.ssh:/home/gaggibot/.ssh:ro        # ssh key for git push
