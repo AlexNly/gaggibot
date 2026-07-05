@@ -84,6 +84,13 @@ h2 { margin: 4px 0 2px; font-size: 21px; }
 .meta { color: var(--ink-2); margin-bottom: 16px; }
 .meta b { color: var(--ink); font-weight: 600; }
 
+.compare-row { margin: -6px 0 12px; }
+#compare {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--ink-2); font: inherit; max-width: 100%;
+}
+.legend .overlay-note { color: var(--muted); font-style: italic; }
+
 .chart-card { background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 14px 14px 6px; margin-bottom: 14px; position: relative; }
 .chart-card h3 { margin: 0 0 2px; font-size: 14px; }
