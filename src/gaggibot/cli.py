@@ -122,11 +122,17 @@ async def _run(config: Config, *, replay: str | None, dry_run: bool) -> int:
                 )
 
         async def save_notes(shot_id: int, notes: dict) -> bool:
+            from .hints import make_hint
+
             for attempt in range(3):
                 try:
                     resp = await client.notes_save(shot_id, notes)
                     log.info("notes saved for %06d: %s", shot_id, resp.get("msg", "?"))
                     schedule_sync()  # push notes + regenerated journal
+                    if config.hints_enabled:
+                        hint = make_hint(notes)
+                        if hint:
+                            await messenger.send(hint)
                     return True
                 except Exception as exc:  # noqa: BLE001
                     log.warning("notes save attempt %d failed: %s", attempt + 1, exc)
