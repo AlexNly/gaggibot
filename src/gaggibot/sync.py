@@ -63,6 +63,12 @@ async def sync(
                 _git(repo, "rebase", "--abort")
                 raise SyncConflict(pull.stderr.strip()[-500:])
 
+        # quarantine legacy corrupted notes first (SPA-fallback downloads, see machine.py)
+        for p in shots_dir.glob("*.json"):
+            if not p.read_bytes().lstrip().startswith(b"{"):
+                log.warning("quarantining corrupt notes file %s", p.name)
+                p.rename(p.with_suffix(".json.corrupt"))
+
         # --- shots ---
         index = await client.fetch_index()
         for entry in index.entries:
@@ -80,15 +86,9 @@ async def sync(
             if entry.has_notes or not notes_path.exists():
                 notes = await client.fetch_notes(entry.id)
                 if notes is not None:
-                    new = json.dumps(notes, indent=1)
-                    if not notes_path.exists() or notes_path.read_text() != new:
-                        notes_path.write_text(new)
-
-        # quarantine legacy corrupted notes (SPA-fallback downloads, see machine.py)
-        for p in shots_dir.glob("*.json"):
-            if not p.read_bytes().lstrip().startswith(b"{"):
-                log.warning("quarantining corrupt notes file %s", p.name)
-                p.rename(p.with_suffix(".json.corrupt"))
+                    new = json.dumps(notes, indent=1).encode()
+                    if not notes_path.exists() or notes_path.read_bytes() != new:
+                        notes_path.write_bytes(new)
 
         # --- profiles + settings (best effort) ---
         try:
