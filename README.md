@@ -31,6 +31,10 @@ into the web UI.
   Pages. Because the journal lives outside the machine, it survives firmware
   updates and downgrades, a dying SD card, or a water-damaged machine.
 - Ships a standalone `.slog` decoder (`gaggibot decode shot.slog --csv`).
+- After a sour, bitter or low-rated shot it suggests the next dial-in step
+  (grind → ratio → temperature, one variable at a time), following
+  [modsmthng's Automatic Pro cheat sheet](https://modsmthng.github.io/Automatic-Pro/)
+  — disable with `GAGGIBOT_HINTS=0`.
 
 ## The shot journal
 
@@ -117,6 +121,7 @@ Environment variables, or the same keys in `~/.config/gaggibot/config.toml`:
 | `GAGGIBOT_DATA_REPO` | — | Path to a git clone; enables archive + journal |
 | `GAGGIBOT_SITE_TITLE` | `Shot Journal` | Title of the generated journal |
 | `GAGGIBOT_JOURNAL_URL` | — | Public journal URL, used for `/last` deep links |
+| `GAGGIBOT_HINTS` | `1` | Dial-in hints after sour/bitter/low-rated shots |
 | `GAGGIBOT_STATE_DIR` | `~/.local/state/gaggibot` | Bot state (defaults, resume) |
 | `GAGGIBOT_MIN_SHOT_S` | `10` | Ignore shots shorter than this |
 | `GAGGIBOT_IGNORE_PROFILES` | `(?i)backflush\|descale\|flush\|clean` | Profile regex to skip |
@@ -157,6 +162,14 @@ There is no reasonable self-hosted WhatsApp bot API. Two workable paths:
 bridge your Telegram/Matrix chat via [mautrix](https://docs.mau.fi/bridges/),
 or Meta's WhatsApp Business Cloud API (requires a business account). Native
 support: contributions welcome.
+
+## Credits
+
+- [GaggiMate](https://gaggimate.eu) by jniebuhr — the machine controller this
+  companion talks to.
+- The dial-in hint rules follow the
+  [Automatic Pro cheat sheet](https://modsmthng.github.io/Automatic-Pro/) by
+  **modsmthng**.
 
 ## License
 
