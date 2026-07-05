@@ -78,23 +78,7 @@ function renderDetail(id, shot) {
   const t = shot.series.t;
   const S = (key) => shot.series[key] && shot.series[key].some(v => v !== 0) ? shot.series[key] : null;
 
-  chart(charts, "Pressure (bar)", t, h.phases, [
-    { label: "pressure", data: S("cp"), color: css("--s1") },
-    { label: "target", data: S("tp"), color: css("--s1"), dash: true },
-  ]);
-  chart(charts, "Flow (ml/s)", t, h.phases, [
-    { label: "pump", data: S("fl"), color: css("--s1") },
-    { label: "puck", data: S("pf"), color: css("--s2") },
-    { label: "scale", data: S("vf"), color: css("--s3") },
-  ]);
-  chart(charts, "Temperature (°C)", t, h.phases, [
-    { label: "boiler", data: S("ct"), color: css("--s1") },
-    { label: "target", data: S("tt"), color: css("--s1"), dash: true },
-  ]);
-  chart(charts, "Weight (g)", t, h.phases, [
-    { label: "scale", data: S("v"), color: css("--s1") },
-    { label: "estimated", data: S("ev"), color: css("--s2") },
-  ]);
+  combinedChart(charts, t, h.phases, S);
 
   const dl = [];
   const noteFields = [["Bean", n.beanType], ["Grind", n.grindSetting],
@@ -107,60 +91,88 @@ function renderDetail(id, shot) {
     : "";
 }
 
-/* ---- SVG line chart with crosshair tooltip ---- */
+/* ---- Combined multi-axis chart, styled after the GaggiMate web UI ----
+ * One plot, three scales: temperature (left axis), pressure/flow (right axis),
+ * weight (far-right axis). Colors follow GaggiMate's language: orange temps,
+ * blue pressures, green flows, purple weights; targets dashed.
+ */
 
-function chart(parent, title, t, phases, seriesIn) {
-  const series = seriesIn.filter(s => s.data);
-  if (!series.length || !t || t.length < 2) return;
+function combinedChart(parent, t, phases, S) {
+  if (!t || t.length < 2) return;
+  const v = S("v"), ev = S("ev");
+  const weight = v || ev;
+  const series = [
+    { key: "ct", label: "Current Temperature", data: S("ct"), color: css("--c-temp"), axis: "temp" },
+    { key: "tt", label: "Target Temperature", data: S("tt"), color: css("--c-temp"), axis: "temp", dash: true },
+    { key: "cp", label: "Current Pressure", data: S("cp"), color: css("--c-press"), axis: "bar" },
+    { key: "tp", label: "Target Pressure", data: S("tp"), color: css("--c-press"), axis: "bar", dash: true },
+    { key: "fl", label: "Current Pump Flow", data: S("fl"), color: css("--c-flow"), axis: "bar" },
+    { key: "pf", label: "Current Puck Flow", data: S("pf"), color: css("--c-puck"), axis: "bar" },
+    { key: "tf", label: "Target Pump Flow", data: S("tf"), color: css("--c-flow"), axis: "bar", dash: true },
+    { key: "w", label: v ? "Weight" : "Weight (est.)", data: weight, color: css("--c-weight"), axis: "g" },
+    { key: "vf", label: "Weight Flow", data: S("vf"), color: css("--c-wflow"), axis: "bar" },
+  ].filter(s => s.data);
 
   const card = document.createElement("div");
   card.className = "chart-card";
-  card.innerHTML = `<h3>${title}</h3>
-    <div class="legend">${series.map(s =>
-      `<span><span class="chip${s.dash ? " dash" : ""}" style="background:${s.color};color:${s.color}"></span>${s.label}</span>`).join("")}
-    </div>`;
+  card.innerHTML = `<div class="legend">${series.map(s =>
+    `<span><span class="chip${s.dash ? " dash" : ""}" style="background:${s.color};color:${s.color}"></span>${s.label}</span>`).join("")}
+  </div>`;
   parent.appendChild(card);
 
-  const W = Math.max(320, Math.min(card.clientWidth - 28, 860)), H = 190;
-  const padL = 38, padR = 10, padT = 8, padB = 22;
+  const W = Math.max(340, Math.min(card.clientWidth - 28, 900)), H = 340;
+  const hasWeight = series.some(s => s.axis === "g");
+  const padL = 44, padR = hasWeight ? 84 : 46, padT = 10, padB = 26;
   const xMax = t[t.length - 1] || 1;
-  let yMax = Math.max(...series.flatMap(s => s.data)) * 1.08 || 1;
-  let yMin = Math.min(0, ...series.flatMap(s => s.data));
-  if (title.startsWith("Temperature")) yMin = Math.floor(Math.min(...series.flatMap(s => s.data)) / 10) * 10;
-  const x = v => padL + (v / xMax) * (W - padL - padR);
-  const y = v => padT + (1 - (v - yMin) / (yMax - yMin)) * (H - padT - padB);
 
-  const grid = niceTicks(yMin, yMax, 4).map(v =>
-    `<line x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}" stroke="var(--grid)"/>
-     <text x="${padL - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`).join("");
-  const xt = niceTicks(0, xMax, 6).map(v =>
-    `<text x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}s</text>`).join("");
+  // temp axis: tight window like GaggiMate (e.g. 86-100 °C)
+  const temps = series.filter(s => s.axis === "temp").flatMap(s => s.data);
+  const tempMin = temps.length ? Math.floor(Math.min(...temps) / 2) * 2 : 0;
+  const tempMax = temps.length ? Math.ceil((Math.max(...temps) + 0.5) / 2) * 2 : 1;
+  // bar / g/s axis: zero-based
+  const bars = series.filter(s => s.axis === "bar").flatMap(s => s.data);
+  const barMax = Math.max(2, Math.ceil(Math.max(...bars, 0) * 1.15));
+  // weight axis: zero-based
+  const gMax = hasWeight ? Math.max(5, Math.ceil(Math.max(...weight) * 1.1 / 5) * 5) : 1;
 
-  // Labels go on two alternating rows; a label is dropped (line kept) only if
-  // it would overlap the previous label on BOTH rows.
-  const rowEnds = [-Infinity, -Infinity];
-  const phaseMarks = (phases || []).filter(p => p.t > 0.5 && p.t < xMax - 0.5).map(p => {
+  const x = s => padL + (s / xMax) * (W - padL - padR);
+  const yOf = {
+    temp: val => padT + (1 - (val - tempMin) / (tempMax - tempMin)) * (H - padT - padB),
+    bar: val => padT + (1 - val / barMax) * (H - padT - padB),
+    g: val => padT + (1 - val / gMax) * (H - padT - padB),
+  };
+
+  const leftTicks = niceTicks(tempMin, tempMax, 6).map(val =>
+    `<line x1="${padL}" y1="${yOf.temp(val)}" x2="${W - padR}" y2="${yOf.temp(val)}" stroke="var(--grid)"/>
+     <text x="${padL - 6}" y="${yOf.temp(val) + 3}" text-anchor="end">${val}°</text>`).join("");
+  const rightTicks = niceTicks(0, barMax, 6).map(val =>
+    `<text x="${W - padR + 6}" y="${yOf.bar(val) + 3}">${val}</text>`).join("");
+  const gTicks = hasWeight ? niceTicks(0, gMax, 5).map(val =>
+    `<text x="${W - padR + 40}" y="${yOf.g(val) + 3}">${val}g</text>`).join("") : "";
+  const axisTitles = `<text x="${W - padR + 6}" y="${padT - 1}" class="axis-title">bar·g/s</text>`;
+  const xt = niceTicks(0, xMax, 8).map(val =>
+    `<text x="${x(val)}" y="${H - 8}" text-anchor="middle">${val}s</text>`).join("");
+
+  // GaggiMate-style vertical phase labels
+  const phaseMarks = (phases || []).filter(p => p.t > 0.3 && p.t < xMax - 0.3).map(p => {
     const px = x(p.t);
-    let label = "";
-    const row = rowEnds[0] <= px ? 0 : rowEnds[1] <= px ? 1 : -1;
-    if (row >= 0) {
-      const name = p.name.length > 14 ? p.name.slice(0, 13) + "…" : p.name;
-      label = `<text class="phase-label" x="${px + 3}" y="${padT + 9 + row * 11}">${esc(name)}</text>`;
-      rowEnds[row] = px + name.length * 5.2 + 10;
-    }
-    return `<line x1="${px}" y1="${padT}" x2="${px}" y2="${H - padB}" stroke="var(--axis)" stroke-dasharray="2 3"/>${label}`;
+    const name = p.name.length > 20 ? p.name.slice(0, 19) + "…" : p.name;
+    return `<line x1="${px}" y1="${padT}" x2="${px}" y2="${H - padB}" stroke="var(--axis)"/>
+      <text class="phase-label" x="${px}" y="${padT + 4}"
+        transform="rotate(-90 ${px} ${padT + 4})" text-anchor="end">${esc(name)}</text>`;
   }).join("");
 
   const paths = series.map(s => {
-    const d = s.data.map((v, i) => `${i ? "L" : "M"}${x(t[i]).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const y = yOf[s.axis];
+    const d = s.data.map((val, i) => `${i ? "L" : "M"}${x(t[i]).toFixed(1)},${y(val).toFixed(1)}`).join("");
     return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2"
-      ${s.dash ? 'stroke-dasharray="5 4" opacity="0.75"' : ""} stroke-linejoin="round"/>`;
+      ${s.dash ? 'stroke-dasharray="6 4" opacity="0.8"' : ""} stroke-linejoin="round"/>`;
   }).join("");
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", W);
   svg.setAttribute("height", H);
-  svg.innerHTML = `${grid}${xt}
+  svg.innerHTML = `${leftTicks}${rightTicks}${gTicks}${axisTitles}${xt}
     <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="var(--axis)"/>
     ${phaseMarks}${paths}
     <line class="cross" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="var(--axis)" visibility="hidden"/>`;
@@ -170,22 +182,23 @@ function chart(parent, title, t, phases, seriesIn) {
   tip.className = "tooltip";
   card.appendChild(tip);
   const cross = svg.querySelector(".cross");
+  const unit = { temp: "°C", bar: "", g: "g" };
 
   svg.addEventListener("pointermove", ev => {
     const rect = svg.getBoundingClientRect();
     const px = ev.clientX - rect.left;
     if (px < padL || px > W - padR) return hide();
     const time = ((px - padL) / (W - padL - padR)) * xMax;
-    let i = t.findIndex(v => v >= time);
+    let i = t.findIndex(val => val >= time);
     if (i < 0) i = t.length - 1;
     cross.setAttribute("x1", x(t[i]));
     cross.setAttribute("x2", x(t[i]));
     cross.setAttribute("visibility", "visible");
-    tip.innerHTML = `${t[i].toFixed(1)}s<br>` + series.map(s =>
-      `<span style="color:${s.color}">●</span> ${s.label} <b>${s.data[i].toFixed(1)}</b>`).join("<br>");
+    tip.innerHTML = `${t[i].toFixed(1)}s<br>` + series.filter(s => !s.dash).map(s =>
+      `<span style="color:${s.color}">●</span> ${s.label.replace("Current ", "")} <b>${s.data[i].toFixed(1)}${unit[s.axis]}</b>`).join("<br>");
     tip.style.display = "block";
     const left = Math.min(px + 14, W - tip.offsetWidth - 8);
-    tip.style.left = `${left}px`;
+    tip.style.left = `${Math.max(0, left)}px`;
     tip.style.top = `${ev.clientY - rect.top + 10}px`;
   });
   svg.addEventListener("pointerleave", hide);

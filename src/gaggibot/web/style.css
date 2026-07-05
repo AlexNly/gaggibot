@@ -11,6 +11,13 @@
   --s2: #1baf7a; /* aqua */
   --s3: #eda100; /* yellow */
   --star: #eda100;
+  /* GaggiMate-style series colors (combined shot chart) */
+  --c-temp: #e64a19;
+  --c-press: #1e88e5;
+  --c-flow: #43a047;
+  --c-puck: #1b5e20;
+  --c-weight: #8e24aa;
+  --c-wflow: #7c6bd6;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -26,6 +33,12 @@
     --s2: #199e70;
     --s3: #c98500;
     --star: #c98500;
+    --c-temp: #ff7043;
+    --c-press: #42a5f5;
+    --c-flow: #c0ca33;
+    --c-puck: #388e3c;
+    --c-weight: #ba68c8;
+    --c-wflow: #9b8cf0;
   }
 }
 
@@ -81,7 +94,8 @@ h2 { margin: 4px 0 2px; font-size: 21px; }
 .legend .dash { background: none !important; border-top: 2px dashed currentColor;
   height: 0; width: 12px; vertical-align: 2px; }
 svg text { font: 11px system-ui, sans-serif; fill: var(--muted); }
-svg .phase-label { font-size: 10px; }
+svg .phase-label { font-size: 10px; fill: var(--ink-2); }
+svg .axis-title { font-size: 9px; }
 
 .tooltip {
   position: absolute; pointer-events: none; background: var(--surface);

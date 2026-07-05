@@ -44,6 +44,7 @@ def _shot_payload(shot: Shot, notes: dict | None) -> dict:
             "cp": _round(s.get("cp", []), 2),
             "tp": _round(s.get("tp", []), 2),
             "fl": _round(s.get("fl", []), 2),
+            "tf": _round(s.get("tf", []), 2),
             "pf": _round(s.get("pf", []), 2),
             "vf": _round(s.get("vf", []), 2),
             "v": _round(s.get("v", []), 1),
