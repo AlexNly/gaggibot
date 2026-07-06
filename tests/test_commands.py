@@ -1,9 +1,9 @@
 import pytest
 
-from gaggibot.commands import CommandRouter, make_frame_cache
-from gaggibot.config import Config
-from gaggibot.machine import MachineError
-from gaggibot.state import State
+from matebot.commands import CommandRouter, make_frame_cache
+from matebot.config import Config
+from matebot.machine import MachineError
+from matebot.state import State
 
 
 class FakeMessenger:

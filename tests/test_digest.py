@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from gaggibot.digest import compute, seconds_until_sunday_evening
+from matebot.digest import compute, seconds_until_sunday_evening
 
 NOW = datetime(2026, 7, 5, 20, 0)  # a Sunday evening
 TS = NOW.timestamp()

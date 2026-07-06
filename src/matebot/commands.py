@@ -52,7 +52,7 @@ class CommandRouter:
         handler = getattr(self, f"_cmd_{cmd}", None)
         if handler is None:
             if cmd == "start":
-                await self.messenger.send("☕ gaggibot at your service.\n\n" + HELP)
+                await self.messenger.send("☕ matebot at your service.\n\n" + HELP)
                 return True
             return False
         try:

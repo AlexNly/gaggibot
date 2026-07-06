@@ -50,7 +50,7 @@ async def sync(
     shots_dir = repo / "shots"
     shots_dir.mkdir(parents=True, exist_ok=True)
 
-    with open(repo / ".gaggibot.lock", "w") as lock:
+    with open(repo / ".matebot.lock", "w") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:

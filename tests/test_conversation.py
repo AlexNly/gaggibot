@@ -1,8 +1,8 @@
 import pytest
 
-from gaggibot.conversation import Conversation
-from gaggibot.messengers.base import Messenger, Option, OptionSelected, TextReply
-from gaggibot.state import State
+from matebot.conversation import Conversation
+from matebot.messengers.base import Messenger, Option, OptionSelected, TextReply
+from matebot.state import State
 
 
 class FakeMessenger(Messenger):

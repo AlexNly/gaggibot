@@ -10,10 +10,10 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN pip install --no-cache-dir ".[all]"
 
-RUN useradd -m -u 1000 gaggibot
-USER gaggibot
-ENV GAGGIBOT_STATE_DIR=/data
+RUN useradd -m -u 1000 matebot
+USER matebot
+ENV MATEBOT_STATE_DIR=/data
 VOLUME /data
 
-ENTRYPOINT ["gaggibot"]
+ENTRYPOINT ["matebot"]
 CMD ["run"]

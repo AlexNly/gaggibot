@@ -9,26 +9,26 @@ from pathlib import Path
 
 DEFAULT_CONFIG = Path(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-) / "gaggibot" / "config.toml"
+) / "matebot" / "config.toml"
 
 # dataclass field -> environment variable
 ENV_MAP = {
-    "machine_host": "GAGGIBOT_MACHINE_HOST",
-    "messenger": "GAGGIBOT_MESSENGER",
+    "machine_host": "MATEBOT_MACHINE_HOST",
+    "messenger": "MATEBOT_MESSENGER",
     "telegram_token": "TELEGRAM_BOT_TOKEN",
     "telegram_chat_id": "TELEGRAM_CHAT_ID",
     "discord_token": "DISCORD_BOT_TOKEN",
     "discord_channel_id": "DISCORD_CHANNEL_ID",
-    "data_repo": "GAGGIBOT_DATA_REPO",
-    "state_dir": "GAGGIBOT_STATE_DIR",
-    "min_shot_s": "GAGGIBOT_MIN_SHOT_S",
-    "ignore_profiles": "GAGGIBOT_IGNORE_PROFILES",
-    "sync_enabled": "GAGGIBOT_SYNC",
-    "site_title": "GAGGIBOT_SITE_TITLE",
-    "journal_url": "GAGGIBOT_JOURNAL_URL",
-    "hints_enabled": "GAGGIBOT_HINTS",
-    "digest_enabled": "GAGGIBOT_DIGEST",
-    "clean_every": "GAGGIBOT_CLEAN_EVERY",
+    "data_repo": "MATEBOT_DATA_REPO",
+    "state_dir": "MATEBOT_STATE_DIR",
+    "min_shot_s": "MATEBOT_MIN_SHOT_S",
+    "ignore_profiles": "MATEBOT_IGNORE_PROFILES",
+    "sync_enabled": "MATEBOT_SYNC",
+    "site_title": "MATEBOT_SITE_TITLE",
+    "journal_url": "MATEBOT_JOURNAL_URL",
+    "hints_enabled": "MATEBOT_HINTS",
+    "digest_enabled": "MATEBOT_DIGEST",
+    "clean_every": "MATEBOT_CLEAN_EVERY",
 }
 
 
@@ -45,7 +45,7 @@ class Config:
         default_factory=lambda: os.environ.get(
             "XDG_STATE_HOME", os.path.expanduser("~/.local/state")
         )
-        + "/gaggibot"
+        + "/matebot"
     )
     min_shot_s: float = 10.0
     ignore_profiles: str = r"(?i)backflush|descale|flush|clean"
