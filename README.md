@@ -1,4 +1,4 @@
-# gaggibot
+# matebot
 
 A post-shot companion for [GaggiMate](https://gaggimate.eu) espresso machines.
 
@@ -7,14 +7,14 @@ shot the ritual was: pull out the phone, open the web UI, find Shot History,
 tap edit, type everything in. Most days that didn't happen, and by 23:47,
 lying in bed, the grind setting of today's best shot was gone for good.
 
-gaggibot turns the workflow around: when a shot finishes, the machine messages
+matebot turns the workflow around: when a shot finishes, the machine messages
 *you* and asks the few things you'd otherwise forget — rating, taste, beans,
 grind, doses. Thirty seconds of tapping while you sip. The answers are written
 straight back into GaggiMate's own Shot Notes, exactly as if you'd typed them
 into the web UI.
 
 <p align="center">
-  <img src="docs/screenshots/telegram-chat.png" width="420" alt="gaggibot asking for a shot rating on Telegram right after the shot finished">
+  <img src="docs/screenshots/telegram-chat.png" width="420" alt="matebot asking for a shot rating on Telegram right after the shot finished">
 </p>
 
 ## What it does
@@ -24,17 +24,17 @@ into the web UI.
 - Runs a short questionnaire via **Telegram** or **Discord** (Matrix planned),
   with one-tap "same as last shot" defaults for beans, grind and dose.
 - Saves the answers into the machine's shot history — GaggiMate stays the
-  source of truth, with or without gaggibot.
+  source of truth, with or without matebot.
 - Optionally archives every shot (`.slog` + notes), your brew profiles and
   machine settings (credentials redacted) to a git repository after each shot.
 - Generates a static **shot journal** from that archive, ready for GitHub
   Pages. Because the journal lives outside the machine, it survives firmware
   updates and downgrades, a dying SD card, or a water-damaged machine.
-- Ships a standalone `.slog` decoder (`gaggibot decode shot.slog --csv`).
+- Ships a standalone `.slog` decoder (`matebot decode shot.slog --csv`).
 - After a sour, bitter or low-rated shot it suggests the next dial-in step
   (grind → ratio → temperature, one variable at a time), following
   [modsmthng's Automatic Pro cheat sheet](https://modsmthng.github.io/Automatic-Pro/)
-  — disable with `GAGGIBOT_HINTS=0`.
+  — disable with `MATEBOT_HINTS=0`.
 
 ## The shot journal
 
@@ -52,34 +52,34 @@ and notes.
 ### Docker
 
 ```bash
-mkdir gaggibot && cd gaggibot
-curl -O https://raw.githubusercontent.com/AlexNly/gaggibot/main/docker-compose.example.yml
+mkdir matebot && cd matebot
+curl -O https://raw.githubusercontent.com/AlexNly/matebot/main/docker-compose.example.yml
 cp docker-compose.example.yml docker-compose.yml
 # edit: machine host, bot token, chat id
 docker compose up -d
 ```
 
 Images are multi-arch (`amd64` + `arm64`, so a Raspberry Pi works):
-`ghcr.io/alexnly/gaggibot:latest`. There is no cloud service behind this —
+`ghcr.io/alexnly/matebot:latest`. There is no cloud service behind this —
 the bot needs to run on something in your home network that is always on.
 A Pi Zero 2 W and a USB charger is the whole data center.
 
 ### pip
 
 ```bash
-pip install "gaggibot[telegram] @ git+https://github.com/AlexNly/gaggibot"
-gaggibot run
+pip install "matebot[telegram] @ git+https://github.com/AlexNly/matebot"
+matebot run
 ```
 
 ### NixOS (flake)
 
 ```nix
-inputs.gaggibot.url = "github:AlexNly/gaggibot";
+inputs.matebot.url = "github:AlexNly/matebot";
 
-services.gaggibot = {
+services.matebot = {
   enable = true;
   machineHost = "192.168.1.50";
-  environmentFile = "/etc/secrets/gaggibot";  # TELEGRAM_BOT_TOKEN=... / TELEGRAM_CHAT_ID=...
+  environmentFile = "/etc/secrets/matebot";  # TELEGRAM_BOT_TOKEN=... / TELEGRAM_CHAT_ID=...
   dataRepo = "/var/lib/gaggimate-journal";    # optional
 };
 ```
@@ -91,7 +91,7 @@ services.gaggibot = {
    from `https://api.telegram.org/bot<TOKEN>/getUpdates`.
    Discord: create an application + bot, invite it to a server, enable the
    *message content* intent, copy the channel id.
-2. Point `GAGGIBOT_MACHINE_HOST` at your GaggiMate. A DHCP reservation is more
+2. Point `MATEBOT_MACHINE_HOST` at your GaggiMate. A DHCP reservation is more
    reliable than `gaggimate.local`.
 3. Pull a shot.
 
@@ -110,35 +110,35 @@ Besides the post-shot questionnaire, the bot answers commands (any messenger):
 
 ## Configuration
 
-Environment variables, or the same keys in `~/.config/gaggibot/config.toml`:
+Environment variables, or the same keys in `~/.config/matebot/config.toml`:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `GAGGIBOT_MACHINE_HOST` | `gaggimate.local` | GaggiMate hostname/IP |
-| `GAGGIBOT_MESSENGER` | `telegram` | `telegram` or `discord` |
+| `MATEBOT_MACHINE_HOST` | `gaggimate.local` | GaggiMate hostname/IP |
+| `MATEBOT_MESSENGER` | `telegram` | `telegram` or `discord` |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | — | Telegram credentials |
 | `DISCORD_BOT_TOKEN` / `DISCORD_CHANNEL_ID` | — | Discord credentials |
-| `GAGGIBOT_DATA_REPO` | — | Path to a git clone; enables archive + journal |
-| `GAGGIBOT_SITE_TITLE` | `Shot Journal` | Title of the generated journal |
-| `GAGGIBOT_JOURNAL_URL` | — | Public journal URL, used for `/last` deep links |
-| `GAGGIBOT_HINTS` | `1` | Dial-in hints after sour/bitter/low-rated shots |
-| `GAGGIBOT_STATE_DIR` | `~/.local/state/gaggibot` | Bot state (defaults, resume) |
-| `GAGGIBOT_MIN_SHOT_S` | `10` | Ignore shots shorter than this |
-| `GAGGIBOT_IGNORE_PROFILES` | `(?i)backflush\|descale\|flush\|clean` | Profile regex to skip |
+| `MATEBOT_DATA_REPO` | — | Path to a git clone; enables archive + journal |
+| `MATEBOT_SITE_TITLE` | `Shot Journal` | Title of the generated journal |
+| `MATEBOT_JOURNAL_URL` | — | Public journal URL, used for `/last` deep links |
+| `MATEBOT_HINTS` | `1` | Dial-in hints after sour/bitter/low-rated shots |
+| `MATEBOT_STATE_DIR` | `~/.local/state/matebot` | Bot state (defaults, resume) |
+| `MATEBOT_MIN_SHOT_S` | `10` | Ignore shots shorter than this |
+| `MATEBOT_IGNORE_PROFILES` | `(?i)backflush\|descale\|flush\|clean` | Profile regex to skip |
 
 ## CLI
 
 ```
-gaggibot run                 # the bot (--replay frames.jsonl --dry-run to test)
-gaggibot decode SHOT.slog    # .slog -> JSON (--csv for CSV)
-gaggibot sitegen shots/ -o docs/ --title "My Shot Journal"
-gaggibot sync                # one-off journal sync (shots, profiles, settings, site)
+matebot run                 # the bot (--replay frames.jsonl --dry-run to test)
+matebot decode SHOT.slog    # .slog -> JSON (--csv for CSV)
+matebot sitegen shots/ -o docs/ --title "My Shot Journal"
+matebot sync                # one-off journal sync (shots, profiles, settings, site)
 ```
 
 ## Publishing your journal on GitHub Pages
 
-1. Create a repo for your data, clone it where gaggibot runs, set
-   `GAGGIBOT_DATA_REPO` to the clone.
+1. Create a repo for your data, clone it where matebot runs, set
+   `MATEBOT_DATA_REPO` to the clone.
 2. On GitHub: Settings → Pages → Deploy from branch → `main` / `/docs`.
 3. Every shot now updates `https://<you>.github.io/<repo>/`.
 
@@ -154,7 +154,7 @@ your own git remote. Requires GaggiMate firmware ≥ v1.7 (binary shot logs).
   are redacted before anything is written to disk
 
 The `.slog` v5 binary format (512-byte header, 26-byte samples at 250 ms) is
-documented in [`src/gaggibot/slog.py`](src/gaggibot/slog.py).
+documented in [`src/matebot/slog.py`](src/matebot/slog.py).
 
 ### WhatsApp?
 

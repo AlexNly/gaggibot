@@ -1,4 +1,4 @@
-from gaggibot.hints import make_hint
+from matebot.hints import make_hint
 
 
 def test_good_shot_no_hint():

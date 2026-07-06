@@ -4,7 +4,7 @@ import struct
 
 import pytest
 
-from gaggibot.slog import SlogError, is_slog, parse_index, parse_slog
+from matebot.slog import SlogError, is_slog, parse_index, parse_slog
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 GOLDEN = FIXTURES / "000004.slog"

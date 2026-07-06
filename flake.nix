@@ -1,5 +1,5 @@
 {
-  description = "gaggibot — the proactive companion for GaggiMate espresso machines";
+  description = "matebot — the proactive companion for GaggiMate espresso machines";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
 
@@ -10,9 +10,9 @@
     {
       packages = forAllSystems (system:
         let pkgs = nixpkgs.legacyPackages.${system}; in rec {
-          default = gaggibot;
-          gaggibot = pkgs.python3Packages.buildPythonApplication {
-            pname = "gaggibot";
+          default = matebot;
+          matebot = pkgs.python3Packages.buildPythonApplication {
+            pname = "matebot";
             version = "0.1.0";
             pyproject = true;
             src = self;
@@ -23,18 +23,18 @@
               # discord.py is optional at runtime; add it when using the discord messenger
             ] ++ pkgs.lib.optional (pkgs.python3Packages ? discordpy) pkgs.python3Packages.discordpy;
             nativeCheckInputs = with pkgs.python3Packages; [ pytestCheckHook pytest-asyncio ];
-            pythonImportsCheck = [ "gaggibot" ];
+            pythonImportsCheck = [ "matebot" ];
           };
         });
 
       nixosModules.default = { config, lib, pkgs, ... }:
         let
-          cfg = config.services.gaggibot;
+          cfg = config.services.matebot;
           pkg = self.packages.${pkgs.system}.default;
         in
         {
-          options.services.gaggibot = {
-            enable = lib.mkEnableOption "gaggibot, the GaggiMate shot companion";
+          options.services.matebot = {
+            enable = lib.mkEnableOption "matebot, the GaggiMate shot companion";
             machineHost = lib.mkOption {
               type = lib.types.str;
               description = "Hostname/IP of the GaggiMate controller.";
@@ -54,12 +54,12 @@
             };
             user = lib.mkOption {
               type = lib.types.str;
-              default = "gaggibot";
+              default = "matebot";
               description = "User to run as (needs git+ssh identity when dataRepo is set).";
             };
             stateDir = lib.mkOption {
               type = lib.types.str;
-              default = "/var/lib/gaggibot";
+              default = "/var/lib/matebot";
             };
             minShotDuration = lib.mkOption { type = lib.types.int; default = 10; };
             ignoreProfiles = lib.mkOption {
@@ -69,32 +69,32 @@
           };
 
           config = lib.mkIf cfg.enable {
-            users.users = lib.mkIf (cfg.user == "gaggibot") {
-              gaggibot = { isSystemUser = true; group = "gaggibot"; home = cfg.stateDir; };
+            users.users = lib.mkIf (cfg.user == "matebot") {
+              matebot = { isSystemUser = true; group = "matebot"; home = cfg.stateDir; };
             };
-            users.groups = lib.mkIf (cfg.user == "gaggibot") { gaggibot = { }; };
+            users.groups = lib.mkIf (cfg.user == "matebot") { matebot = { }; };
 
-            systemd.services.gaggibot = {
-              description = "gaggibot — GaggiMate shot companion";
+            systemd.services.matebot = {
+              description = "matebot — GaggiMate shot companion";
               wantedBy = [ "multi-user.target" ];
               after = [ "network-online.target" ];
               wants = [ "network-online.target" ];
               path = [ pkgs.git pkgs.openssh ];
               environment = {
-                GAGGIBOT_MACHINE_HOST = cfg.machineHost;
-                GAGGIBOT_MESSENGER = cfg.messenger;
-                GAGGIBOT_STATE_DIR = cfg.stateDir;
-                GAGGIBOT_MIN_SHOT_S = toString cfg.minShotDuration;
-                GAGGIBOT_IGNORE_PROFILES = cfg.ignoreProfiles;
+                MATEBOT_MACHINE_HOST = cfg.machineHost;
+                MATEBOT_MESSENGER = cfg.messenger;
+                MATEBOT_STATE_DIR = cfg.stateDir;
+                MATEBOT_MIN_SHOT_S = toString cfg.minShotDuration;
+                MATEBOT_IGNORE_PROFILES = cfg.ignoreProfiles;
               } // lib.optionalAttrs (cfg.dataRepo != null) {
-                GAGGIBOT_DATA_REPO = toString cfg.dataRepo;
-                GAGGIBOT_SYNC = "1";
+                MATEBOT_DATA_REPO = toString cfg.dataRepo;
+                MATEBOT_SYNC = "1";
               };
               serviceConfig = {
-                ExecStart = "${pkg}/bin/gaggibot run";
+                ExecStart = "${pkg}/bin/matebot run";
                 EnvironmentFile = cfg.environmentFile;
                 User = cfg.user;
-                StateDirectory = lib.mkIf (cfg.stateDir == "/var/lib/gaggibot") "gaggibot";
+                StateDirectory = lib.mkIf (cfg.stateDir == "/var/lib/matebot") "matebot";
                 Restart = "always";
                 RestartSec = "10";
                 NoNewPrivileges = true;

@@ -1,5 +1,5 @@
-from gaggibot.bags import bag_status, open_bag, track_shot
-from gaggibot.state import State
+from matebot.bags import bag_status, open_bag, track_shot
+from matebot.state import State
 
 
 def make_state(tmp_path):

@@ -2,7 +2,7 @@ import json
 import pathlib
 import shutil
 
-from gaggibot.sitegen import generate
+from matebot.sitegen import generate
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 

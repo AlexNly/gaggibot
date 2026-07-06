@@ -3,8 +3,8 @@ import struct
 
 import pytest
 
-from gaggibot.slog import parse_index
-from gaggibot.watcher import ShotWatcher, replay_frames
+from matebot.slog import parse_index
+from matebot.watcher import ShotWatcher, replay_frames
 
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "status_frames.jsonl"
 

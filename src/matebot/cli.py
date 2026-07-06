@@ -1,4 +1,4 @@
-"""gaggibot CLI: run / decode / sitegen / sync."""
+"""matebot CLI: run / decode / sitegen / sync."""
 
 from __future__ import annotations
 
@@ -15,10 +15,10 @@ from .slog import SlogError, parse_slog
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="gaggibot",
+        prog="matebot",
         description="The proactive companion for GaggiMate espresso machines.",
     )
-    parser.add_argument("--version", action="version", version=f"gaggibot {__version__}")
+    parser.add_argument("--version", action="version", version=f"matebot {__version__}")
     parser.add_argument("--config", help="path to config.toml")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -72,7 +72,7 @@ async def _sync(config: Config) -> int:
     from .sync import sync
 
     if not config.data_repo:
-        print("error: GAGGIBOT_DATA_REPO / data_repo not configured", file=sys.stderr)
+        print("error: MATEBOT_DATA_REPO / data_repo not configured", file=sys.stderr)
         return 1
     async with GaggiMateClient(config.machine_host) as client:
         # WS connection (for profiles) is optional here; HTTP does the rest.
@@ -90,7 +90,7 @@ async def _run(config: Config, *, replay: str | None, dry_run: bool) -> int:
     from .sync import sync_soon
     from .watcher import ShotWatcher, replay_frames
 
-    log = logging.getLogger("gaggibot")
+    log = logging.getLogger("matebot")
     state = State(pathlib.Path(config.state_dir) / "state.json")
 
     async with GaggiMateClient(config.machine_host) as client:

@@ -1,7 +1,7 @@
 """Generate the static shot-explorer site (GitHub Pages friendly).
 
 Input:  a folder of ``NNNNNN.slog`` + optional ``NNNNNN.json`` notes files
-        (the layout of a gaggibot/GaggiMate data repo's ``shots/`` dir).
+        (the layout of a matebot/GaggiMate data repo's ``shots/`` dir).
 Output: ``docs/`` with a self-contained viewer (no CDN):
         index.html + app.js + style.css + index.json + shots/<id>.json
 """
@@ -105,7 +105,7 @@ def generate(shots_dir: str | Path, out_dir: str | Path, *, title: str = "Shot J
     index.sort(key=lambda e: e["id"], reverse=True)
     (out_dir / "index.json").write_text(json.dumps({"title": title, "shots": index}))
 
-    web = importlib.resources.files("gaggibot") / "web"
+    web = importlib.resources.files("matebot") / "web"
     for name in WEB_ASSETS:
         (out_dir / name).write_text((web / name).read_text())
     log.info("site generated: %d shots -> %s", len(index), out_dir)
