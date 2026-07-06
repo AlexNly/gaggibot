@@ -84,6 +84,9 @@ h2 { margin: 4px 0 2px; font-size: 21px; }
 .meta { color: var(--ink-2); margin-bottom: 16px; }
 .meta b { color: var(--ink); font-weight: 600; }
 
+.chartjs-card .chart-holder { position: relative; height: 460px; }
+@media (max-width: 640px) { .chartjs-card .chart-holder { height: 360px; } }
+
 .compare-row { margin: -6px 0 12px; }
 #compare {
   padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
