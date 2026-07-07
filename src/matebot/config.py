@@ -29,6 +29,7 @@ ENV_MAP = {
     "hints_enabled": "MATEBOT_HINTS",
     "digest_enabled": "MATEBOT_DIGEST",
     "clean_every": "MATEBOT_CLEAN_EVERY",
+    "water_warn_pct": "MATEBOT_WATER_WARN",
     "plots_enabled": "MATEBOT_PLOTS",
     "wake_hook": "MATEBOT_WAKE_HOOK",
     "sleep_hook": "MATEBOT_SLEEP_HOOK",
@@ -58,6 +59,7 @@ class Config:
     hints_enabled: bool = True  # dial-in suggestions after sour/bitter/low-rated shots
     digest_enabled: bool = True  # weekly summary on Sunday evening
     clean_every: int = 40  # backflush reminder every N espresso shots; 0 = off
+    water_warn_pct: int = 15  # warn when the tank drops below this percent; 0 = off
     plots_enabled: bool = True  # send the shot chart as a photo (needs matplotlib)
     wake_hook: str = ""  # shell command to power the machine's smart plug ON
     sleep_hook: str = ""  # shell command to power the smart plug OFF
@@ -78,7 +80,7 @@ class Config:
                 continue
             if f.name == "min_shot_s":
                 value = float(value)
-            elif f.name == "clean_every":
+            elif f.name in ("clean_every", "water_warn_pct"):
                 value = int(value)
             elif f.name in ("sync_enabled", "hints_enabled", "digest_enabled", "plots_enabled"):
                 value = str(value).lower() in ("1", "true", "yes", "on")

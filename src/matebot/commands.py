@@ -206,13 +206,35 @@ class CommandRouter:
     # ------------------------------------------------------------- frames
 
     async def on_frame(self, frame: dict[str, Any]) -> None:
-        """Called for every status frame; fires the ready ping after /wake."""
-        if not self._awaiting_ready or frame.get("tp") != "evt:status":
+        """Called for every status frame: ready ping after /wake, tank watch."""
+        if frame.get("tp") != "evt:status":
+            return
+        await self._check_water(frame)
+        if not self._awaiting_ready:
             return
         ct, tt = frame.get("ct", 0), frame.get("tt", 0)
         if frame.get("m") == 1 and tt >= 60 and ct >= tt - 1.0:
             self._awaiting_ready = False
-            await self.messenger.send(f"☕ {ct:.1f}°C — the machine is ready when you are.")
+            text = f"☕ {ct:.1f}°C — the machine is ready when you are."
+            wl = frame.get("wl")
+            if wl is not None and self.config.water_warn_pct and wl < self.config.water_warn_pct:
+                text += f" The tank is at {wl}%, though."
+            await self.messenger.send(text)
+
+    async def _check_water(self, frame: dict[str, Any]) -> None:
+        """Warn once when the tank runs low; re-arm after a refill."""
+        wl = frame.get("wl")
+        threshold = self.config.water_warn_pct
+        if wl is None or not threshold:
+            return
+        warned = self.state.get("water_warned", False)
+        if not warned and wl < threshold:
+            self.state.set("water_warned", True)
+            await self.messenger.send(
+                f"💧 Water tank at {wl}% — maybe top it up before the next shot."
+            )
+        elif warned and wl >= threshold + 10:
+            self.state.set("water_warned", False)
 
 
 async def build_digest(client, config) -> str | None:
