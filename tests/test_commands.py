@@ -173,3 +173,39 @@ async def test_sleep_hook_works_when_machine_already_off(monkeypatch, tmp_path, 
     monkeypatch.setattr("matebot.commands.asyncio.sleep", no_sleep)
     await router.handle("/sleep")
     assert marker.exists()  # plug still gets cut even though the WS is down
+
+
+@pytest.mark.asyncio
+async def test_low_water_warns_once_and_rearms(setup):
+    router, client, state, convo, fm, cache = setup
+    frame = lambda wl: {"tp": "evt:status", "m": 0, "ct": 60.0, "tt": 0, "wl": wl}  # noqa: E731
+    await router.on_frame(frame(40))
+    assert fm.sent == []
+    await router.on_frame(frame(12))
+    await router.on_frame(frame(9))   # still low: no second warning
+    assert sum("Water tank" in t for t in fm.sent) == 1
+    await router.on_frame(frame(80))  # refilled: re-armed
+    await router.on_frame(frame(10))
+    assert sum("Water tank" in t for t in fm.sent) == 2
+
+
+@pytest.mark.asyncio
+async def test_low_water_disabled(setup):
+    router, client, state, convo, fm, cache = setup
+    router.config.water_warn_pct = 0
+    await router.on_frame({"tp": "evt:status", "m": 0, "ct": 60.0, "tt": 0, "wl": 3})
+    assert fm.sent == []
+
+
+@pytest.mark.asyncio
+async def test_ready_ping_mentions_low_tank(setup):
+    router, client, state, convo, fm, cache = setup
+    await router.handle("/wake")
+    await router.on_frame({"tp": "evt:status", "m": 1, "ct": 92.5, "tt": 93.0, "wl": 40})
+    ready = [t for t in fm.sent if "ready when you are" in t]
+    assert ready and "tank" not in ready[0]
+
+    router._awaiting_ready = True
+    state.set("water_warned", True)  # already warned; ping still mentions it
+    await router.on_frame({"tp": "evt:status", "m": 1, "ct": 92.6, "tt": 93.0, "wl": 8})
+    assert any("The tank is at 8%" in t for t in fm.sent)
