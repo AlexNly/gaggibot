@@ -68,3 +68,45 @@ async def test_deleted_entries_are_skipped():
     watcher.last_known_id = 58
     entry = await watcher._resolve_new_entry(budget_s=0.2, poll_s=0.1)
     assert entry is None
+
+
+class StaleThenFreshClient:
+    """Reproduces the morning-of-July-9 bug: a stale completed entry (an
+    aborted 8s shot) sits in the index while the real shot's entry only
+    completes on a later poll."""
+
+    def __init__(self):
+        self.polls = 0
+
+    async def fetch_index(self):
+        self.polls += 1
+        header = struct.pack("<IHHII16x", 0x58444953, 1, 128, 3, 74)
+        def entry(sid, dur_ms, flags):
+            return struct.pack("<IIIHBB32s48s32x", sid, 1700000000, dur_ms, 360, 0, flags,
+                               b"p", b"Direct Lever v3")
+        e71 = entry(71, 8300, 0x01)                        # stale failed shot, completed
+        e72 = entry(72, 29000, 0x01 if self.polls > 2 else 0x00)  # real shot completes late
+        return parse_index(header + entry(70, 30000, 0x01) + e71 + e72)
+
+
+@pytest.mark.asyncio
+async def test_resolution_skips_stale_entry_and_waits_for_matching_duration():
+    watcher = ShotWatcher(StaleThenFreshClient(), min_duration_s=10)
+    watcher.last_known_id = 70
+    entry = await watcher._resolve_new_entry(duration_hint_ms=25400, budget_s=2.0, poll_s=0.1)
+    assert entry is not None and entry.id == 72  # NOT the stale 8.3s shot 71
+
+
+@pytest.mark.asyncio
+async def test_resolution_falls_back_to_newest_when_nothing_matches():
+    class OnlyStale:
+        async def fetch_index(self):
+            header = struct.pack("<IHHII16x", 0x58444953, 1, 128, 1, 72)
+            e = struct.pack("<IIIHBB32s48s32x", 71, 1700000000, 8300, 360, 0, 0x01,
+                            b"p", b"Direct Lever v3")
+            return parse_index(header + e)
+
+    watcher = ShotWatcher(OnlyStale(), min_duration_s=10)
+    watcher.last_known_id = 70
+    entry = await watcher._resolve_new_entry(duration_hint_ms=42600, budget_s=0.3, poll_s=0.1)
+    assert entry is not None and entry.id == 71  # better late than never, logged loudly
