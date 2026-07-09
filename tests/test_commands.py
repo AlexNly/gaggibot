@@ -36,7 +36,7 @@ class FakeConvo:
     def __init__(self):
         self.started = []
 
-    async def start_shot(self, *args):
+    async def start_shot(self, *args, photo=None):
         self.started.append(args)
 
 

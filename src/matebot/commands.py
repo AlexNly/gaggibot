@@ -183,9 +183,22 @@ class CommandRouter:
             await self.messenger.send("No shot to fix yet.")
             return
         await self.messenger.send(f"✏️ Let's redo shot #{last['shot_id']}:")
+        photo = None
+        if getattr(self.config, "plots_enabled", False):
+            try:
+                from .plot import render_shot_png
+                from .slog import parse_slog
+
+                parsed = parse_slog(await self.client.fetch_slog(last["shot_id"]))
+                photo = render_shot_png(
+                    parsed, title=f"Shot #{last['shot_id']} — {parsed.profile_name}"
+                )
+            except Exception as exc:  # noqa: BLE001 - photo is a nice-to-have
+                log.info("fix plot skipped: %s", exc)
         await self.convo.start_shot(
             last["shot_id"], last.get("profile", ""),
             last.get("duration_ms", 0), last.get("volume_g", 0.0),
+            photo=photo,
         )
 
     async def _cmd_newbag(self) -> None:

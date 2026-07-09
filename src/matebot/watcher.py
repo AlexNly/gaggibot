@@ -69,9 +69,21 @@ class ShotWatcher:
             return False
         return True
 
-    async def _resolve_new_entry(self, *, budget_s: float = 120.0, poll_s: float = 3.0):
-        """Poll index.bin until a new completed entry appears."""
+    async def _resolve_new_entry(
+        self, *, duration_hint_ms: int = 0, budget_s: float = 120.0, poll_s: float = 3.0
+    ):
+        """Poll index.bin for the entry belonging to the shot that just ended.
+
+        The entry is only flagged completed after extended recording (up to
+        ~1 min of scale settling), while older completed-but-unclaimed
+        entries (e.g. an aborted shot minutes earlier) are already sitting in
+        the index. Picking "newest completed" therefore resolves one shot
+        behind — so a candidate must also match the observed duration. Only
+        when the budget runs out do we fall back to the newest completed
+        entry, loudly.
+        """
         waited = 0.0
+        fallback = None
         while waited <= budget_s:
             try:
                 index = await self.client.fetch_index()
@@ -83,11 +95,22 @@ class ShotWatcher:
                     for e in index.entries
                     if e.id > self.last_known_id and e.completed and not e.deleted
                 ]
+                for entry in sorted(fresh, key=lambda e: e.id, reverse=True):
+                    if (
+                        not duration_hint_ms
+                        or abs(entry.duration_ms - duration_hint_ms) <= 10_000
+                    ):
+                        return entry
                 if fresh:
-                    return max(fresh, key=lambda e: e.id)
+                    fallback = max(fresh, key=lambda e: e.id)
             await asyncio.sleep(poll_s)
             waited += poll_s
-        return None
+        if fallback is not None:
+            log.warning(
+                "no index entry matched the observed %.1fs shot; falling back to id %d (%.1fs)",
+                duration_hint_ms / 1000, fallback.id, fallback.duration_ms / 1000,
+            )
+        return fallback
 
     async def shots(self, frames: AsyncIterator[dict]) -> AsyncIterator[FinishedShot]:
         """Consume status frames, yield finished (accepted) shots."""
@@ -117,10 +140,14 @@ class ShotWatcher:
                 if is_utility and self.on_utility:
                     await self.on_utility(profile)
                 if self._accept(profile, duration):
-                    entry = await self._resolve_new_entry()
+                    entry = await self._resolve_new_entry(duration_hint_ms=int(duration))
                     if entry is None:
                         log.warning("shot ended but no new index entry appeared")
                     else:
+                        log.info(
+                            "resolved shot id=%d (%.1fs, observed %.1fs)",
+                            entry.id, entry.duration_ms / 1000, duration / 1000,
+                        )
                         self.last_known_id = entry.id
                         yield FinishedShot(entry, profile, entry.duration_ms or duration)
             prev = frame
