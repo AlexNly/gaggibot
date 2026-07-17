@@ -23,6 +23,10 @@
     padding: 14px 28px; font: 600 17px system-ui; color: #101c2e;
     background: #f5efe6; border: none; border-radius: 14px;
   }
+  button.flip {
+    position: static; transform: none; padding: 4px 10px; margin-left: 10px;
+    font-size: 16px; background: #1c2c44; color: #f5efe6; border-radius: 10px;
+  }
 </style>
 </head>
 <body>
@@ -30,6 +34,7 @@
   <h1>🎥 MATEbot Cam</h1>
   <div class="dot" id="dot"></div>
   <span id="status">starting…</span>
+  <button id="flip" class="flip" title="Switch camera" hidden>🔄</button>
 </header>
 <video id="preview" playsinline muted autoplay></video>
 <button id="enable">Enable camera</button>
@@ -41,24 +46,30 @@ const dot = document.getElementById("dot");
 const preview = document.getElementById("preview");
 const enableBtn = document.getElementById("enable");
 let stream = null, recorder = null, ws = null, wakeLock = null;
+let facing = localStorage.getItem("matebot-facing") || "environment";
 
 function setState(state, text) {
   dot.className = "dot " + state;
   statusEl.textContent = text;
 }
 
+async function getStream() {
+  return navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: true,
+  });
+}
+
 async function enableCamera() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true,
-    });
+    stream = await getStream();
   } catch (e) {
     setState("", "camera denied: " + e.name);
     return;
   }
   preview.srcObject = stream;
   enableBtn.style.display = "none";
+  flipBtn.hidden = false;
   try { wakeLock = await navigator.wakeLock.request("screen"); } catch (e) { /* optional */ }
   document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible" && wakeLock !== null) {
@@ -101,6 +112,25 @@ function stopRec() {
 }
 
 enableBtn.addEventListener("click", enableCamera);
+
+// flip front/rear (e.g. phone lying face-up under a bottomless portafilter)
+const flipBtn = document.getElementById("flip");
+flipBtn.addEventListener("click", async () => {
+  if (recorder) return; // never mid-recording
+  facing = facing === "environment" ? "user" : "environment";
+  localStorage.setItem("matebot-facing", facing);
+  const old = stream;
+  try {
+    stream = await getStream();
+  } catch (e) {
+    stream = old;
+    setState("armed", "camera switch failed: " + e.name);
+    return;
+  }
+  if (old) old.getTracks().forEach(t => t.stop());
+  preview.srcObject = stream;
+});
+
 setState("", "tap to enable the camera");
 </script>
 </body>
